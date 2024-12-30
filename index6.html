@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Collins HAYA - Terminal Portfolio</title>
+    <style>
+        :root {
+            --terminal-bg: #1a1b1e;
+            --terminal-text: #33ff33;
+            --terminal-prompt: #00ff00;
+            --terminal-error: #ff3333;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Courier New', monospace;
+        }
+
+        body {
+            background: var(--terminal-bg);
+            color: var(--terminal-text);
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        #terminal {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+            overflow-y: auto;
+            height: 90vh;
+        }
+
+        .terminal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--terminal-text);
+            padding-bottom: 10px;
+        }
+
+        .window-controls span {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .close { background: #ff5f56; }
+        .minimize { background: #ffbd2e; }
+        .maximize { background: #27c93f; }
+
+        .command-list {
+            list-style: none;
+            margin-bottom: 20px;
+        }
+
+        .command {
+            cursor: pointer;
+            padding: 5px 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .command:hover {
+            background: rgba(0, 255, 0, 0.1);
+            transform: translateX(10px);
+        }
+
+        .output {
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 2px solid var(--terminal-text);
+        }
+
+        .prompt::before {
+            content: "visitor@collins-terminal:~$ ";
+            color: var(--terminal-prompt);
+        }
+
+        .typing {
+            border-right: 2px solid var(--terminal-text);
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { border-color: transparent; }
+            50% { border-color: var(--terminal-text); }
+        }
+
+        .matrix-rain {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        /* Snake Game Styles */
+        #gameCanvas {
+            border: 1px solid var(--terminal-text);
+            display: none;
+            margin: 20px auto;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            #terminal { 
+                padding: 10px;
+                height: 95vh;
+            }
+            .command { padding: 8px 5px; }
+        }
+
+        .hidden { display: none; }
+        
+        .surprise-text {
+            animation: rainbow 3s infinite;
+        }
+
+        @keyframes rainbow {
+            0% { color: #ff0000; }
+            20% { color: #ffff00; }
+            40% { color: #00ff00; }
+            60% { color: #00ffff; }
+            80% { color: #ff00ff; }
+            100% { color: #ff0000; }
+        }
+    </style>
+</head>
+<body>
+    <canvas class="matrix-rain"></canvas>
+    <div id="terminal">
+        <div class="terminal-header">
+            <div class="window-controls">
+                <span class="close"></span>
+                <span class="minimize"></span>
+                <span class="maximize"></span>
+            </div>
+            <span>collins_haya_portfolio_terminal.exe</span>
+        </div>
+        <div class="content">
+            <p class="prompt typing">Bienvenue sur le terminal de Collins HAYA! 🚀</p> <br> <br>
+
+            <ul class="command-list">
+                <li class="command" onclick="showAbout()">🤖 about - À propos de moi</li>
+                <li class="command" onclick="showSkills()">🎓 skills - Compétences & Expertise</li>
+                <li class="command" onclick="showProjects()">💼 projects - Mes projets (Attention, contient du code propre !)</li>
+                <li class="command" onclick="showExperience()">📚 exp - Expérience professionnelle</li>
+                <li class="command" onclick="showGame()">🎮 game - Jouer à Snake XenXia Dev</li>
+                <li class="command" onclick="showContact()">📫 contact - Me contacter (promis, je réponds plus vite qu'un garbage collector en panique)</li>
+                <li class="command" onclick="showEasterEgg()" style="color: transparent; text-shadow: 0 0 8px var(--terminal-text);">🎁 ???</li>
+            </ul>
+        </div>
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+    </div>
+
+    <script>
+        // Matrix Rain Effect
+        const canvas = document.querySelector('.matrix-rain');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // const katakana = 'アばカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
+        // const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        // const nums = '0123456789';
+        // const alphabet = katakana + latin + nums;
+
+        const fontSize = 16;
+        const columns = canvas.width/fontSize;
+
+        const rainDrops = Array(Math.floor(columns)).fill(canvas.height);
+
+        function draw() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#0F0';
+            ctx.font = fontSize + 'px monospace';
+
+            for(let i = 0; i < rainDrops.length; i++) {
+                const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+                ctx.fillText(text, i*fontSize, rainDrops[i]*fontSize);
+                
+                if(rainDrops[i]*fontSize > canvas.height && Math.random() > 0.975){
+                    rainDrops[i] = 0;
+                }
+                rainDrops[i]++;
+            }
+        }
+
+        setInterval(draw, 30);
+
+        // Section Display Functions
+        function showAbout() {
+            const about = `
+                <div class="output">
+                    <h2>🤓 À propos de Collins HAYA</h2>
+                    <p>👋 Salut! Je suis Collins HAYA 👨‍💻 Développeur Java le jour, ninja du code la nuit 🌛 </p>
+                    <p>Si Java était une langue parlée, je serais bilingue avec un accent Spring Boot prononcé. </p>
+                    <p>Fun fact : J'ai une fois débogué une application si longtemps que ma plante verte 🌱 a appris à coder en me regardant. Elle fait maintenant du Python 🐍.</p>
+                    <p>Quand je ne suis pas en train de négocier avec les exceptions, je:</p>
+                    <ul>
+                        <li>- Convaincs Git de ne pas perdre mes fichiers 📁</li>
+                        <li>- Apprends à mon chat à faire des code reviews 🐱</li>
+                        <li>- Écris du code si propre que Robert C. Martin serait fière 😌. Si vous voyez des bugs dans mon code, ce sont des features non documentées 🙌🏼😂</li>
+                    </ul>
+                </div>`;
+            updateTerminal(about);
+        }
+
+        function showSkills() {
+            const skills = `
+                <div class="output">
+                    <h2>🎓 Compétences</h2>
+                    
+                    <h3>🎯 Compétences Techniques:</h3>
+                    <ul>
+                        <li>- Java: Si solide que même Chuck Norris me demande conseil (parfois)</li>
+                        <li>- Spring Boot: Je fais fleurir les microservices comme personne</li>
+                        <li>- Debugging: Niveau Sherlock Holmes (mais avec plus de café)</li>
+                        <li>- Git: Expert en résolution de conflits, maître en l'art du "git push --force" (je plaisante, ne faites jamais ça)</li>
+                        <li>- SQL: Ça JOIN bien 😉</li>
+                    </ul>
+
+                    <h3>🎭 Soft Skills:</h3>
+                    <ul>
+                        
+                        <li>- Traducteur assermenté entre les devs et les humains normaux</li>
+                        <li>- Capable de transformer un bug en feature</li>
+                        <li>- Expert en diplomatie inter-framework</li>
+                        <li>- Capable de comprendre les spécifications du client mieux que le client lui-même</li>
+                        <li>- Maître Zen de la deadline impossible</li>
+                    </ul>
+
+                    <h3>🏆 Certifications:</h3>
+                    <ul>
+                        <li>- Doctorat en Caféinologie Appliquée</li>
+                        <li>- Champion du monde de débogage les yeux fermés</li>
+                        <li>- Expert certifié en lecture de Stack Overflow</li>
+                        <li>- Doctorat en Résolution de Conflits Entre Classes (JAVA)</li>
+                        <li>- Maîtrise en Psychologie des Objets Nul</li>
+                        <li>- Ceinture noire de ctrl+c ctrl+v</li>
+                        <li>- Diplômé de l'Université des Memes Informatiques</li>
+                    </ul>
+                </div>`;
+            updateTerminal(skills);
+        }
+
+        function showProjects() {
+            const projects = `
+                <div class="output">
+                    <h2>💼 Projets</h2>
+                    
+                    <h3>🚀 MegaService</h3>
+                    <p>- Une API REST qui ne REST jamais</p>
+                    <p>- Tech stack : Java, Spring Boot, Chat GPT 🙌🏼
+                    <p>- En cours (comme mon café)/p>
+
+                    <h3>🤖 Bot Trading Crypto</h3>
+                    <p>- A perdu tout mon argent, mais hey, il marche parfaitement!</p>
+                    <p>- Stack : Java 17, Spring Boot, WebFlux</p>
+                    
+
+                    <h3>🎮 Snake XenXia Dev</h3>
+                    <p>- Un Snake qui mange des bugs au lieu de pommes.</p>
+                    <p>- Statut : Personne n'a encore réussi à finir le jeu. Mais peut-être que vous êtes différent ? La section "game" vous attend... si vous osez.</p>
+
+                    <h3>🛒 E-commerce Microservices</h3>
+                    <p>- Architecture distribuée avec Spring Cloud, 1M+ transactions/jour</p>
+                    <h3>🤖 BugHunter Pro</h3>
+                    <p>- IA qui trouve les bugs avant qu'ils n'existent. Fun fact: L'IA a trouvé sa propre existence comme bug</p>
+                    <p>- Stack: Java, Neural Networks, Paradoxes Temporels</p>
+                
+                </div>`;
+            updateTerminal(projects);
+        }
+
+        function showExperience() {
+            const experience = `
+                <div class="output">
+                    <h2>📚 Expérience Professionnelle</h2>
+
+                    <h3>🚀 Architecte Logiciel Senior - TechGéants Inc.</h3>
+                    <p>2022 - Présent</p>
+                    <ul>
+                        <li>- Direction d'une équipe qui a réussi à faire fonctionner du code legacy sans invoquer de démons</li>
+                        <li>- Record personnel : 3 mois sans aucun NullPointerException</li>
+                    </ul>
+
+                    <h3>👨‍💻 Développeur Java - StartupFolles SARL</h3>
+                    <p>2019 - 2022</p>
+                    <ul>
+                        <li>- Création d'une application qui a survécu en prod (miracle!)</li>
+                        <li>- Médiation réussie entre les développeurs front-end et back-end</li>
+                    </ul>
+
+                    <h3>🎓 Stagiaire - BoutiqueInfo</h3>
+                    <p>2018 - 2019</p>
+                    <ul>
+                        <li>- Première expérience professionnelle où j'ai appris que Ctrl+S toutes les 10 secondes n'est pas de la paranoïa</li>
+                        <li>- A découvert que "ça marche sur ma machine" n'est pas une solution acceptable</li>
+                    </ul>
+                </div>`;
+            updateTerminal(experience);
+        }
+
+        function showContact() {
+            const contact = `
+                <div class="output">
+                    <h2>📫 Contact</h2>
+                    <p>Une question sur Java, un projet en tête ou juste envie de discuter ? Je suis toujours partant pour échanger !</p>
+                    <ul>
+                        <li>📧 Email: collinshaya@gmail.com</li>
+                        <li>💼 LinkedIn: www.linkedin.com/in/collins-haya-788a5a232/</li>
+                        <li>🐙 GitHub: github.com/Collins-Webdev</li>
+                        <li>📱 WhatsApp: (+229) 01 53 04 37 48</li>
+                    </ul>
+                    <p class="surprise-text">Temps de réponse: Aussi rapide qu'un "Hello World" en console.</p>
+                </div>`;
+            updateTerminal(contact);
+        }
+
+// Suite du code précédent...
+
+            // Snake Game Implementation
+            let snake, food, direction, gameLoop, score;
+            const gameCanvas = document.getElementById('gameCanvas');
+            const gameCtx = gameCanvas.getContext('2d');
+            
+            function initGame() {
+                snake = [{x: 10, y: 10}];
+                food = {x: 15, y: 15};
+                direction = 'right';
+                score = 0;
+                
+                if (gameLoop) clearInterval(gameLoop);
+                gameLoop = setInterval(updateGame, 100);
+            }
+
+            function updateGame() {
+                const head = {...snake[0]};
+                
+                switch(direction) {
+                    case 'right': head.x++; break;
+                    case 'left': head.x--; break;
+                    case 'up': head.y--; break;
+                    case 'down': head.y++; break;
+                }
+
+                if (head.x < 0 || head.x >= 40 || head.y < 0 || head.y >= 40 ||
+                    snake.some(segment => segment.x === head.x && segment.y === head.y)) {
+                    endGame();
+                    return;
+                }
+
+                snake.unshift(head);
+
+                if (head.x === food.x && head.y === food.y) {
+                    score += 10;
+                    generateFood();
+                    showGameMessage(`Score: ${score} - Tu débugges comme un chef! 🐛`);
+                } else {
+                    snake.pop();
+                }
+
+                drawGame();
+            }
+
+            function generateFood() {
+                const bugsEmoji = ['🐛', '🪲', '🐞'];
+                food = {
+                    x: Math.floor(Math.random() * 40),
+                    y: Math.floor(Math.random() * 40),
+                    type: bugsEmoji[Math.floor(Math.random() * bugsEmoji.length)]
+                };
+            }
+
+            function drawGame() {
+                gameCtx.fillStyle = 'black';
+                gameCtx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
+
+                // Draw snake
+                snake.forEach((segment, index) => {
+                    gameCtx.fillStyle = index === 0 ? '#33ff33' : '#00ff00';
+                    gameCtx.fillRect(segment.x * 10, segment.y * 10, 8, 8);
+                });
+
+                // Draw food
+                gameCtx.font = '10px Arial';
+                gameCtx.fillText(food.type || '🐛', food.x * 10, (food.y * 10) + 8);
+            }
+
+            function endGame() {
+                clearInterval(gameLoop);
+                showGameMessage(`Game Over! Score: ${score} - Même les meilleurs devs ont des bugs! 😅`);
+            }
+
+            function showGameMessage(message) {
+                const output = document.querySelector('.game-message');
+                if (output) output.textContent = message;
+            }
+
+            function showGame() {
+                const gameInterface = `
+                    <div class="output">
+                        <h2>🎮 SNAKE-DEV-EDITION</h2>
+                        <p>Déboguez en mangeant des bugs! Utilisez les flèches pour vous déplacer.</p>
+                        <p class="game-message">Score: 0 - Attrape les bugs avant qu'ils n'atteignent la production! 🚀</p>
+                    </div>`;
+                updateTerminal(gameInterface);
+                gameCanvas.style.display = 'block';
+                initGame();
+            }
+
+            // Easter Egg
+            function showEasterEgg() {
+                const easterEgg = `
+                    <div class="output">
+                        <h2>🎉 Easter Egg Trouvé!</h2>
+                        <p class="surprise-text">Félicitations! Vous avez trouvé mon code secret!</p>
+                        <pre>
+while(alive) {
+    coffee.drink();
+    if(coffee.isEmpty()) {
+        coffee.refill();
+    }
+    code.write();
+}
+                        </pre>
+                        <p>Vous venez de découvrir le secret de ma productivité! ☕</p>
+                        <p>Voici un cookie virtuel pour vous: 🍪</p>
+                    </div>`;
+                updateTerminal(easterEgg);
+            }
+
+            // Utility Functions
+            function updateTerminal(content) {
+                const terminal = document.querySelector('.content');
+                terminal.innerHTML = content + `
+                    <p class="prompt">
+                        <span class="command" onclick="location.reload()" style="color: #00FFFF;">>clear - Retour au menu principal</span>
+                    </p>`;
+            }
+
+            // Keyboard Controls for Snake
+            document.addEventListener('keydown', (e) => {
+                if (!gameLoop) return;
+                
+                switch(e.key) {
+                    case 'ArrowUp':
+                        if (direction !== 'down') direction = 'up';
+                        break;
+                    case 'ArrowDown':
+                        if (direction !== 'up') direction = 'down';
+                        break;
+                    case 'ArrowLeft':
+                        if (direction !== 'right') direction = 'left';
+                        break;
+                    case 'ArrowRight':
+                        if (direction !== 'left') direction = 'right';
+                        break;
+                }
+            });
+
+            // Terminal Startup Animation
+            function typeWriter(text, element, index = 0) {
+                if (index < text.length) {
+                    element.textContent += text.charAt(index);
+                    setTimeout(() => typeWriter(text, element, index + 1), 50);
+                } else {
+                    element.classList.remove('typing');
+                }
+            }
+
+            // Initialize typing animation
+            document.addEventListener('DOMContentLoaded', () => {
+                const welcomeText = document.querySelector('.typing');
+                welcomeText.textContent = '';
+                const welcomesText = 
+
+        "Bienvenue sur le portfolio-terminal de Collins HAYA! 👾 \n\n" +
+
+        "Initialisation du Terminal v1.0.0...\n\n" +
+
+        "[OK] Chargement des modules d'humour...\n" +
+
+        "[OK] Calibrage du niveau de sarcasme...\n" +
+        "[OK] Préparation des blagues de dev...\n" +
+        "[READY] Système opérationnel !\n\n" +
+        "Cliquez sur une commande pour démarrer !";
+                typeWriter(welcomesText, welcomeText);
+            });
+
+            // Responsive Design Handler
+            window.addEventListener('resize', () => {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            });
+            
+
+            // Special matrix effect for typing
+        function addMatrixEffect(text) {
+            const output = document.createElement('div');
+            output.className = 'output matrix-text';
+            output.style.color = '#33FF33';
+            
+            let index = 0;
+            const interval = setInterval(() => {
+                if (index < text.length) {
+                    output.textContent = text.slice(0, index + 1);
+                    index++;
+                } else {
+                    clearInterval(interval);
+                }
+            }, 50);
+            
+            return output;
+        }
+
+        </script>
+    </body>
+</html>
